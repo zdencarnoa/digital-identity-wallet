@@ -16,39 +16,42 @@ Arhitektura sustava podijeljena je na:
 
 ## Funkcionalnosti
 - dodjeljivanje osobnog identifikatora(PID-a) putem e-Osobne
-- enkripcija PID-a korištenjem simetrične kriptografije (AES)
-- sigurna pohrana, generiranje i upravljanje privatnim ključevima
-- autentikacija putem verifiable presentation-a(VP) mehanizma
+- sigurna pohrana, generiranje i upravljanje privatnim ključevima u Android Keystore sustavu
+- ugrađivanje javnog ključa korisnika u PID prilikom izdavanja (key binding)
+- individualni potpis atributa PID-a radi mogućnosti selektivnog otkrivanja podataka
+- autentikacija pomoću prezentacije PID-a uz dokaz posjeda privatnog ključa (potpisivanje nonce-a od strane verifiera)
 - biometrijska autentikacija korisnika
 
 ## Arhitektura sustava
 Komponente sustava:
 * Novčanik (wallet)
-  * generiranje i pohrana privatnog ključa u Android Keystore-a
+  * generiranje i pohrana privatnog ključa u Android Keystore
   * pristup pomoću PIN-a ili biometrije
   * lokalna pohrana PID-a
-  * generiranje VP-a
+  * generiranje prezentacije i potpisivanje nonce-a pri autentikaciji
 * Izdavatelj (issuer)
   * izdaja PID vjerodajnica
   * povezivanje identiteta s javnim ključem korisnika
+  * individualno hashiranje atributa uz sol i potpisivanje liste hasheva
 * Verifier
-  * provjera VP-a i autentifikacija korisnika
+  * provjera potpisa issuer-a i dokaza posjeda privatnog ključa
+  * autentifikacija korisnika
 
 ## Kriptografija sustava
 * Privatni ključ
-  * generira se u Android Keystore sustavu
-  * vezan uz PID
+  * generira se i trajno ostaje u Android Keystore sustavu
+  * korštenje vezano uz PIN ili biometriju
 * Javni ključ
-  * dio PID vjerodajnice
-  * koristi se za verifikaciju
-* MEK(Master Encryption Key)
-  * koristi se za enkripciju PID-a
-  * deriviran pomoću PIN-a
+  * ugrađen u PID vjerodajnicu prilikom izdavanja
+  * koristi se za provjeru dokaza posjeda privatnog ključa
+* Atributi PID-a
+  * svaki atribut hashira se zasebno uz salt
+  * issuer potpisuje listu hasheva atributa - selektivno otkrivanje pojedinih atributa
 * PIN/biometrija
   * koriste se za pristup privatnom ključu
   * implementirani putem Android Keystore-a
 
-PIN -> derivacija ključa -> derivacija MEK-a -> dekripcija i dohvat privatnog ključa 
+Tok autentikacije korisnika: PIN ili biometrija -> Android Keystore otključava korištenje privatnog ključa -> wallet potpisuje nonce verifiera -> verifier provjerava potpis javnim ključem iz PID-a
 
 ## Tehnologije
 * Android(Java)
@@ -56,3 +59,7 @@ PIN -> derivacija ključa -> derivacija MEK-a -> dekripcija i dohvat privatnog k
 * Python - FastAPI
 * Nginx, OpenSSL, AKDCA Root - uspostava mTLS-a i certifikati
 * Certillia middleware - čitanje eOsobne putem preglednika
+
+## Ograničenja implementacije 
+* implementacija ne koristi službeni EUDI format vjerodajnica(SD-JWT VC) niti protokole OpenID4VCI i OpenID4VP
+* struktura PID-a i kriptografski model napravljeni su uz mogućnost nadogradnje na službene EUDI formate i protokole bez redizajna temeljnog dijela sustava
