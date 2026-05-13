@@ -10,3 +10,6 @@ __pycache__/
 
 # PyCharm
 .idea/
+
+# Issuer privatni kljuc
+backend/keys/*.json
