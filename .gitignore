@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtualno okruzenje
+.venv/
+
+# pytest cache
+.pytest_cache/
+
+# PyCharm
+.idea/
