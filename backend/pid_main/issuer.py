@@ -39,8 +39,8 @@ def create_pid(
         attributes: dict[str, Any],
         holder_public_jwk: dict,
         issuer_private_key: JWK,
-        issuer_id: str,
-        validity_days: int
+        issuer_id: str = DEFAULT_ISSUER,
+        validity_days: int = DEFAULT_VALIDITY_DAYS,
 ):
     claims = _build_pid_claims(attributes, holder_public_jwk, issuer_id, validity_days)
 
