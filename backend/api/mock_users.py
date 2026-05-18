@@ -33,6 +33,6 @@ MOCK_USERS: dict[str, dict] = {
 
 def get_user_by_oib(oib:str) -> dict:
 
-    if oib in MOCK_USERS:
+    if oib not in MOCK_USERS:
         raise(UnknownUserError(f"Ne postoji korisnikom s OIB-om {oib}"))
     return dict(MOCK_USERS[oib])
