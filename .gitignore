@@ -13,3 +13,20 @@ __pycache__/
 
 # Issuer privatni kljuc
 backend/keys/*.json
+
+# Android
+android/.gradle/
+android/.idea/
+android/build/
+android/app/build/
+android/local.properties
+android/captures/
+android/*.iml
+android/app/*.iml
+
+# Android Studio
+*.iml
+
+# Keystore / signing files
+*.jks
+*.keystore
