@@ -12,20 +12,28 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.lifecycleScope
 import fer.zavrsni.wallet.crypto.KeystoreManager
+import fer.zavrsni.wallet.network.ApiClient
+import fer.zavrsni.wallet.network.dto.IssueRequest
+import fer.zavrsni.wallet.storage.PidStorage
 import fer.zavrsni.wallet.ui.theme.WalletTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "WalletTest"
+        private const val TEST_OIB = "12345678901"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        testKeystore()
+        lifecycleScope.launch {
+            runFullFlow()
+        }
 
         setContent {
             WalletTheme {
@@ -39,30 +47,45 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun testKeystore() {
-        val keystore = KeystoreManager()
+    private suspend fun runFullFlow() {
+        try {
+            val keystore = KeystoreManager()
 
-        if (keystore.keyExists()){
-            Log.d(TAG, "Kljuc vec postoji, obrisi")
-            keystore.deleteKey()
+            if (keystore.keyExists()) {
+                Log.d(TAG, "Kljuc vec postoji")
+                keystore.deleteKey()
+            }
+
+            Log.d(TAG, "Generiram novi par kljuceva")
+            val holderJwk = keystore.generateKeyPair()
+            Log.d(TAG, "JWK: $holderJwk")
+
+            Log.d(TAG, "POST /issuer/issue za OIB $TEST_OIB...")
+
+            val issueResponse = ApiClient.walletApi.issuePid(
+                IssueRequest(
+                    oib = TEST_OIB,
+                    holderPublicJwk = holderJwk
+                )
+            )
+
+            Log.d(TAG, "Dobiven SD-JWT VC (duljina ${issueResponse.sdJwtVc.length})")
+            Log.d(TAG, "Prvih 80 znakova: ${issueResponse.sdJwtVc}...")
+
+            val storage = PidStorage(this@MainActivity)
+
+            storage.savePid(issueResponse.sdJwtVc)
+            Log.d(TAG, "PID pohranjen u EncryptedSharedPreferences")
+
+            val loadedPid = storage.loadPid()
+            val isto = loadedPid == issueResponse.sdJwtVc
+            Log.d(TAG, "Procitano isto sto je pohranjeno: $isto")
+
+            Log.d(TAG, "RADI")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Greska u flow-u: ${e.message}", e)
         }
-
-        Log.d(TAG, "Generiram novi par kljuceva")
-        val jwk = keystore.generateKeyPair()
-
-        Log.d(TAG, "JWK generiran:")
-        Log.d(TAG, "  kty = ${jwk["kty"]}")
-        Log.d(TAG, "  crv = ${jwk["crv"]}")
-        Log.d(TAG, "  x   = ${jwk["x"]}")
-        Log.d(TAG, "  y   = ${jwk["y"]}")
-
-        val testData = "podatci koji se potpisuju".toByteArray()
-        val signature = keystore.signData(testData)
-        Log.d(TAG, "Potpis dobiven, duljina je ${signature.size} bajtova")
-
-        val jwkPonovo = keystore.publicKeyAsJwk()
-        val isto = jwkPonovo["x"] == jwk["x"] && jwkPonovo["y"] == jwk["y"]
-        Log.d(TAG, "Ponovno citanje vraca isti kljuc: $isto")
     }
 }
 
