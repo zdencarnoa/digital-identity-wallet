@@ -35,3 +35,8 @@ def issue_pid(payload: IssueRequest, request: Request) -> IssueResponse:
 
 
     return IssueResponse(sd_jwt_vc=sd_jwt_vc)
+
+@router.get("/public-key")
+def get_issuer_public_key(request: Request):
+    issuer_key = request.app.state.issuer_key
+    return issuer_key.export_public(as_dict=True)

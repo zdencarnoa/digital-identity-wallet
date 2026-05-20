@@ -12,6 +12,14 @@ import java.security.Signature
 import java.security.interfaces.ECPublicKey
 import java.security.spec.ECGenParameterSpec
 
+/*
+Primarna zadaca ove klase je baratanje kljucevima kroz android keystore sustav, definira alias pod
+kojim se kljuc nalazi, koji se algoritam koristi za potpisivanje i generira parove kljuceva. Osim toga,
+definira za sto se kljuc koristi i implementira razne funkcije za baratanje kljucevima najvaznija od kojih je
+funkcija signData za potpisivanje podataka pomocu reference na kljuc unutar android keystore sustava.
+*/
+
+
 class KeystoreManager {
 
     //Identifikator aplikacije u keystoreu, jedinstveni alias unutar aplikacije, poveznica s privatnim kljucem
@@ -127,5 +135,12 @@ class KeystoreManager {
             bytes,
             Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING
         )
+    }
+
+    //Funkcija koja vraca referencu na privatni kljuc iz keystorea
+    fun getPrivateKeyReference(): PrivateKey {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+        return keyStore.getKey(KEY_ALIAS, null) as? PrivateKey
+            ?: error("Privatni kljuc s aliasom '$KEY_ALIAS' ne postoji")
     }
 }

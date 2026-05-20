@@ -1,0 +1,3 @@
+Data klase unutar ovog paketa odgovaraju pydantic modelima na backendu i poklapaju se s istima. Ideja
+je da specificiraju isti JSON format koji se ocekuje na backendu kako bi android i backend mogli ucinkovito
+komunicirati.

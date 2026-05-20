@@ -5,6 +5,8 @@ import fer.zavrsni.wallet.network.dto.IssueRequest
 import fer.zavrsni.wallet.network.dto.IssueResponse
 import fer.zavrsni.wallet.network.dto.VerifyRequest
 import fer.zavrsni.wallet.network.dto.VerifyResponse
+import kotlinx.serialization.json.JsonObject
+import retrofit2.http.GET
 import retrofit2.http.Body
 import retrofit2.http.POST
 
@@ -22,4 +24,7 @@ interface WalletApi {
 
     @POST("verifier/verify")
     suspend fun verify(@Body request: VerifyRequest): VerifyResponse
+
+    @GET("issuer/public-key")
+    suspend fun getIssuerPublicKey(): JsonObject
 }

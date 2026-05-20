@@ -16,8 +16,11 @@ import androidx.lifecycle.lifecycleScope
 import fer.zavrsni.wallet.crypto.KeystoreManager
 import fer.zavrsni.wallet.network.ApiClient
 import fer.zavrsni.wallet.network.dto.IssueRequest
+import fer.zavrsni.wallet.presentation.SdJwtParser
 import fer.zavrsni.wallet.storage.PidStorage
 import fer.zavrsni.wallet.ui.theme.WalletTheme
+import fer.zavrsni.wallet.network.dto.VerifyRequest
+import fer.zavrsni.wallet.presentation.PresentationBuilder
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -49,42 +52,79 @@ class MainActivity : ComponentActivity() {
 
     private suspend fun runFullFlow() {
         try {
+            // Stvaranje keymanagera za keystore i generiranje kljuceva
             val keystore = KeystoreManager()
 
             if (keystore.keyExists()) {
-                Log.d(TAG, "Kljuc vec postoji")
+                Log.d(TAG, "Kljuc vec postoji...")
                 keystore.deleteKey()
             }
 
-            Log.d(TAG, "Generiram novi par kljuceva")
+            Log.d(TAG, "Generiranje para kljuceva")
             val holderJwk = keystore.generateKeyPair()
             Log.d(TAG, "JWK: $holderJwk")
 
+            // Izdavanje PID-a
             Log.d(TAG, "POST /issuer/issue za OIB $TEST_OIB...")
-
             val issueResponse = ApiClient.walletApi.issuePid(
-                IssueRequest(
-                    oib = TEST_OIB,
-                    holderPublicJwk = holderJwk
+                IssueRequest(oib = TEST_OIB, holderPublicJwk = holderJwk)
+            )
+            Log.d(TAG, "Dobiven SD-JWT VC (duljina ${issueResponse.sdJwtVc.length})")
+
+            // Pohrana PID-a u sustav
+            val storage = PidStorage(this@MainActivity)
+            storage.savePid(issueResponse.sdJwtVc)
+            Log.d(TAG, "PID pohranjen")
+
+            // Provjera s javnim kljucem issuera
+            Log.d(TAG, "Dohvacam issuer javni kljuc...")
+            val issuerJwk = ApiClient.walletApi.getIssuerPublicKey()
+            val check = SdJwtParser.verifyAndLog(issueResponse.sdJwtVc, issuerJwk)
+            if (!check) {
+                Log.e(TAG, "Fail 1 - issuer javni kljuc")
+                return
+            }
+
+            // Provjera potpisa kroz keystore
+            val signingOk = SdJwtParser.testKeystoreSigning(keystore)
+            if (!signingOk) {
+                Log.e(TAG, "Fail 2 - keystore potpis pao")
+                return
+            }
+
+            // Challenge verifiera
+            Log.d(TAG, "POST /verifier/challenge...")
+            val challenge = ApiClient.walletApi.createChallenge()
+            Log.d(TAG, "Challenge: session=${challenge.sessionId}, nonce=${challenge.nonce}")
+
+            // Kreiranje prezentacije za verifikaciju
+            Log.d(TAG, "Slazem prezentaciju (samo birth_date)...")
+            val storedPid = storage.loadPid() ?: error("Fail 3 - PID nije pohranjen")
+            val presentation = PresentationBuilder(keystore).build(
+                storedSdJwt = storedPid,
+                attributesToDisclose = setOf("birth_date"),
+                verifierAudience = challenge.audience,
+                nonce = challenge.nonce,
+            )
+
+            // Slanje prezentacije na verifikaciju
+            Log.d(TAG, "POST /verifier/verify...")
+            val verifyResponse = ApiClient.walletApi.verify(
+                VerifyRequest(
+                    sessionId = challenge.sessionId,
+                    presentation = presentation,
                 )
             )
 
-            Log.d(TAG, "Dobiven SD-JWT VC (duljina ${issueResponse.sdJwtVc.length})")
-            Log.d(TAG, "Prvih 80 znakova: ${issueResponse.sdJwtVc}...")
+            Log.d(TAG, "PRIHVACENA PREZENTACIJA")
+            Log.d(TAG, "Otkriveni atributi:")
+            verifyResponse.verifiedClaims.forEach { (key, value) ->
+                Log.d(TAG, "  $key = $value")
+            }
 
-            val storage = PidStorage(this@MainActivity)
-
-            storage.savePid(issueResponse.sdJwtVc)
-            Log.d(TAG, "PID pohranjen u EncryptedSharedPreferences")
-
-            val loadedPid = storage.loadPid()
-            val isto = loadedPid == issueResponse.sdJwtVc
-            Log.d(TAG, "Procitano isto sto je pohranjeno: $isto")
-
-            Log.d(TAG, "RADI")
-
+            Log.d(TAG, "RADI!")
         } catch (e: Exception) {
-            Log.e(TAG, "Greska u flow-u: ${e.message}", e)
+            Log.e(TAG, "Greska: ${e.message}", e)
         }
     }
 }
