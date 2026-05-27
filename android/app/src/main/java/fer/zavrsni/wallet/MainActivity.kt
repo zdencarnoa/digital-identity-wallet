@@ -2,7 +2,7 @@ package fer.zavrsni.wallet
 
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,10 +20,11 @@ import fer.zavrsni.wallet.presentation.SdJwtParser
 import fer.zavrsni.wallet.storage.PidStorage
 import fer.zavrsni.wallet.ui.theme.WalletTheme
 import fer.zavrsni.wallet.network.dto.VerifyRequest
+import fer.zavrsni.wallet.presentation.BiometricAuth
 import fer.zavrsni.wallet.presentation.PresentationBuilder
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     companion object {
         private const val TAG = "WalletTest"
@@ -85,6 +86,22 @@ class MainActivity : ComponentActivity() {
                 return
             }
 
+            Log.d(TAG, "Trazim biometrijsku autentikaciju")
+            try {
+                BiometricAuth.authenticate(
+                    activity = this@MainActivity,
+                    title = "Prezentacija identiteta",
+                    subtitle = "Potvrdite za potpisivanje prezentacije"
+                )
+                Log.d(TAG, "Autentikacija uspjesna - mogu potpisati")
+            } catch (e: BiometricAuth.BiometricCancelledException) {
+                Log.w(TAG, "Korisnik otkazao, prekidam")
+                return
+            } catch (e: BiometricAuth.BiometricFailedException) {
+                Log.e(TAG, "Autentikacija pala: ${e.message}")
+                return
+            }
+
             // Provjera potpisa kroz keystore
             val signingOk = SdJwtParser.testKeystoreSigning(keystore)
             if (!signingOk) {
@@ -96,6 +113,23 @@ class MainActivity : ComponentActivity() {
             Log.d(TAG, "POST /verifier/challenge...")
             val challenge = ApiClient.walletApi.createChallenge()
             Log.d(TAG, "Challenge: session=${challenge.sessionId}, nonce=${challenge.nonce}")
+
+            //Autentikacija
+            Log.d(TAG, "Trazim biometrijsku autentikaciju...")
+            try {
+                BiometricAuth.authenticate(
+                    activity = this@MainActivity,
+                    title = "Prezentacija identiteta",
+                    subtitle = "Potvrdite za potpisivanje prezentacije"
+                )
+                Log.d(TAG, "Autentikacija uspjesna - mogu potpisati")
+            } catch (e: BiometricAuth.BiometricCancelledException) {
+                Log.w(TAG, "Korisnik otkazao - prekidam flow")
+                return
+            } catch (e: BiometricAuth.BiometricFailedException) {
+                Log.e(TAG, "Autentikacija pala: ${e.message}")
+                return
+            }
 
             // Kreiranje prezentacije za verifikaciju
             Log.d(TAG, "Slazem prezentaciju (samo birth_date)...")

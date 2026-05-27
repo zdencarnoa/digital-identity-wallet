@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId = "fer.zavrsni.wallet"
-        minSdk = 26
+        minSdk = 30
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -60,6 +60,8 @@ dependencies {
     implementation(libs.androidx.security.crypto)
 
     implementation(libs.eudi.sdjwt)
+
+    implementation(libs.androidx.biometric)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

@@ -51,7 +51,10 @@ class KeystoreManager {
             KEY_ALIAS,
             KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
         ).setAlgorithmParameterSpec(ECGenParameterSpec(EC_CURVE)).
-        setDigests(KeyProperties.DIGEST_SHA256).build()
+        setDigests(KeyProperties.DIGEST_SHA256).setUserAuthenticationRequired(true).
+        setUserAuthenticationParameters(5, KeyProperties.AUTH_BIOMETRIC_STRONG
+        or KeyProperties.AUTH_DEVICE_CREDENTIAL).
+        build()
 
         generator.initialize(spec)
         val keyPair: KeyPair = generator.generateKeyPair()
