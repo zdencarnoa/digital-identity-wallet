@@ -1,11 +1,14 @@
-class PidCoreError(Exception):
+"""Iznimke koje se mogu pojaviti u pid_main modulu."""
+
+# Bazna iznimka za sve greske vezane uz izdavanje i verifikaciju PID-a
+class PidError(Exception):
     pass
 
-class PidVerificationError(PidCoreError):
+
+# Baca se kad SD-JWT prezentacija ne prodje verifikaciju
+class PidVerificationError(PidError):
     pass
 
-class PidIssuanceError(PidCoreError):
-    pass
-
-class InvalidKeyError(PidCoreError):
+# Baca se kada issuer odbije izdati PID
+class PidIssuanceError(PidError):
     pass

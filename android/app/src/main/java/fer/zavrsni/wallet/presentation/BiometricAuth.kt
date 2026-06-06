@@ -7,6 +7,15 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import androidx.biometric.BiometricManager.Authenticators
+import androidx.core.content.ContextCompat
+
+/**
+ Omotac oko Android BiometricPrompt API-ja.
+ Od korisnika trazi autentikaciju biometrijom ili PIN-om. Suspending funkcija blokira
+ korutinu sve dok korisnik ne odgovori, odnosno ne dozvoljava daljnji rad dok ispravna autentikacija nije zadovoljena.
+ Koristi se prije svake operacije s Keystore kljucem koji ima setUserAuthenticationRequired(true) postavljen.
+ **/
 
 object BiometricAuth {
 
@@ -18,7 +27,7 @@ object BiometricAuth {
         subtitle: String = "Potvrdite identitet za nastavak",
     ): Boolean = suspendCancellableCoroutine { continuation ->
 
-        val executor = Executors.newSingleThreadExecutor()
+        val executor = ContextCompat.getMainExecutor(activity)
 
         val callback = object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
@@ -34,7 +43,7 @@ object BiometricAuth {
                         BiometricPrompt.ERROR_NEGATIVE_BUTTON ->
                             continuation.resumeWithException(BiometricCancelledException("Korisnik je otkazao"))
                         else ->
-                            continuation.resumeWithException(BiometricCancelledException("$errString (kod $errorCode)"))
+                            continuation.resumeWithException(BiometricFailedException("$errString (kod $errorCode)"))
                     }
                 }
             }
@@ -46,10 +55,10 @@ object BiometricAuth {
 
         val prompt = BiometricPrompt(activity, executor, callback)
 
-        val promptInfo = BiometricPrompt.PromptInfo.Builder().
-            setTitle(title).setSubtitle(subtitle).
-            setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG or
-            androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(title)
+            .setSubtitle(subtitle)
+            .setAllowedAuthenticators(Authenticators.BIOMETRIC_STRONG or Authenticators.DEVICE_CREDENTIAL)
             .build()
 
         continuation.invokeOnCancellation {

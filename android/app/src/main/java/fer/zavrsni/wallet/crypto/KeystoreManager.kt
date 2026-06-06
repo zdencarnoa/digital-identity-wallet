@@ -7,22 +7,22 @@ import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.PrivateKey
-import java.security.PublicKey
 import java.security.Signature
 import java.security.interfaces.ECPublicKey
 import java.security.spec.ECGenParameterSpec
 
 /*
-Primarna zadaca ove klase je baratanje kljucevima kroz android keystore sustav, definira alias pod
-kojim se kljuc nalazi, koji se algoritam koristi za potpisivanje i generira parove kljuceva. Osim toga,
-definira za sto se kljuc koristi i implementira razne funkcije za baratanje kljucevima najvaznija od kojih je
-funkcija signData za potpisivanje podataka pomocu reference na kljuc unutar android keystore sustava.
+Upravljanje korisnikovim privatnim kljucem unutar Android Keystore sustava
+
+Sve operacije s privatnim kljucem odvijaju se unutar trusted execution environment-a (TEE), odnosno
+aplikacija nikad nema direktan pristup kljucu. Pristup kljucu zahtjeva biometrijsku ili PIN autentikaciju korisnika.
+
 */
 
 
 class KeystoreManager {
 
-    //Identifikator aplikacije u keystoreu, jedinstveni alias unutar aplikacije, poveznica s privatnim kljucem
+    // Identifikator aplikacije u keystoreu, jedinstveni alias unutar aplikacije, poveznica s privatnim kljucem
     companion object {
 
         private const val KEY_ALIAS = "wallet_holder_key"
@@ -33,13 +33,13 @@ class KeystoreManager {
         private const val EC_CURVE = "secp256r1"
     }
 
-    //Provjerava postoji li kljuc
+    // Provjerava postoji li kljuc s danim alias-om
     fun keyExists(): Boolean {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
         return keyStore.containsAlias(KEY_ALIAS)
     }
 
-    //Generira novi par kljuceva i veze privatni kljuc uz alias
+    // Generira novi par kljuceva i veze privatni kljuc uz alias
     fun generateKeyPair(): Map<String, String> {
 
         val generator = KeyPairGenerator.getInstance(
@@ -62,16 +62,7 @@ class KeystoreManager {
         return publicKeyToJwk(keyPair.public as ECPublicKey)
     }
 
-    //Cita javni kljuc i vraca ga u JWK formatu
-    fun publicKeyAsJwk(): Map<String, String>{
-        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        val publicKey = keyStore.getCertificate(KEY_ALIAS)?.publicKey
-            ?: error("Kljuc s aliasom '$KEY_ALIAS' ne postoji")
-
-        return publicKeyToJwk(publicKey as ECPublicKey)
-    }
-
-    //Potpisuje dane podatke s privatnim kljucem, ali mu NE pristupa
+    // Potpisuje dane podatke s privatnim kljucem, ali mu NE pristupa
     fun signData(data: ByteArray): ByteArray {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
         val privateKey = keyStore.getKey(KEY_ALIAS, null) as? PrivateKey
@@ -84,7 +75,7 @@ class KeystoreManager {
         }
     }
 
-    //Brisanje kljuca iz walleta
+    // Brisanje kljuca iz walleta
     fun deleteKey() {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
 
@@ -96,6 +87,8 @@ class KeystoreManager {
     /*
     Sljedece funkcije potrebne su radi kompatibilnosti s python libraryem sd-jwt-python na backendu
     */
+
+    // Pretvara Java ECPublicKey u JWK format kompatibilan s sd-jwt-python bibliotekom na backendu
     private fun publicKeyToJwk(publicKey: ECPublicKey): Map<String, String> {
         val point = publicKey.w
         val fieldSize = 32 // jer P-256 ima koordinate od 32 bajta
@@ -111,7 +104,7 @@ class KeystoreManager {
         )
     }
 
-    //Ova funkcija sluzi da makne vodece nule ako ima vise od 32 bajta, ili doda vodece nule ako je manje od 32
+    // Ova funkcija sluzi da makne vodece nule ako ima vise od 32 bajta, ili doda vodece nule ako je manje od 32
     private fun padTo(bytes: ByteArray, targetSize: Int): ByteArray {
         if (bytes.size == targetSize){
             return bytes
@@ -140,10 +133,4 @@ class KeystoreManager {
         )
     }
 
-    //Funkcija koja vraca referencu na privatni kljuc iz keystorea
-    fun getPrivateKeyReference(): PrivateKey {
-        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        return keyStore.getKey(KEY_ALIAS, null) as? PrivateKey
-            ?: error("Privatni kljuc s aliasom '$KEY_ALIAS' ne postoji")
-    }
 }

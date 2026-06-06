@@ -11,13 +11,16 @@ from pid_main.issuer import create_pid
 from pid_main.holder import create_presentation
 from pid_main.verifier import verify_presentation
 
+
 @pytest.fixture
 def issuer_key():
     return generate_issuer_keypair()
 
+
 @pytest.fixture
 def holder_key():
     return generate_holder_keypair()
+
 
 @pytest.fixture
 def dummy_attributes():
@@ -28,6 +31,7 @@ def dummy_attributes():
         "nationality": "HR",
         "personal_administrative_number": "12345678901",
     }
+
 
 @pytest.fixture
 def issued_pid(issuer_key, holder_key, dummy_attributes):
@@ -61,6 +65,7 @@ class TestIssuance:
                 issuer_private_key=issuer_key,
             )
 
+
 ########################################
 # Verifikacija prezentacije - provjerava se prikazuju li se samo ocekivani podatci
 ########################################
@@ -68,10 +73,10 @@ class TestIssuance:
 VERIFIER_AUDIENCE = "https://demo-verifier.fer.hr"
 TEST_NONCE = "nonce-1234567890"
 
+
 class TestVerification:
 
     def test_disclose_all(self, issued_pid, holder_key, issuer_key, dummy_attributes):
-
         presentation = create_presentation(
             sd_jwt_issuance=issued_pid,
             attributes_to_disclose=dummy_attributes.keys(),
@@ -97,7 +102,6 @@ class TestVerification:
         assert "cnf" in verified
 
     def test_selective_disclosure_age(self, issued_pid, holder_key, issuer_key, dummy_attributes):
-
         presentation = create_presentation(
             sd_jwt_issuance=issued_pid,
             attributes_to_disclose=["birth_date"],
@@ -118,6 +122,7 @@ class TestVerification:
         assert "family_name" not in verified
         assert "personal_administrative_number" not in verified
 
+
 ########################################
 # Fail slucajevi
 ########################################
@@ -125,7 +130,6 @@ class TestVerification:
 class TestVerificationFailures:
 
     def test_wrong_nonce_fails(self, issued_pid, holder_key, issuer_key):
-
         presentation = create_presentation(
             sd_jwt_issuance=issued_pid,
             attributes_to_disclose=["given_name"],
@@ -177,7 +181,7 @@ class TestVerificationFailures:
                 expected_nonce=TEST_NONCE,
             )
 
-    #Ovaj test provjerava sto se dogodi kada napadac ima ukradeni sd-jwt
+    # Ovaj test provjerava sto se dogodi kada napadac ima ukradeni sd-jwt
     def test_kb_jwt_not_by_holder(self, issued_pid, holder_key, issuer_key):
         attacker_key = generate_holder_keypair()
         presentation = create_presentation(

@@ -1,4 +1,4 @@
-# pytest tests/test_api.py -v
+# Pokretanje: pytest tests/test_api.py -v
 
 import pytest
 from fastapi.testclient import TestClient
@@ -7,10 +7,12 @@ from api.main import app
 from pid_main.keys import generate_holder_keypair, public_key_to_jwk
 from pid_main.holder import create_presentation
 
+
 @pytest.fixture
 def client():
     with TestClient(app) as client:
         yield client
+
 
 @pytest.fixture
 def holder_key():
@@ -30,13 +32,12 @@ def test_root_returns_ok(client):
 class TestIssuer:
 
     def test_issue_pid_for_known_user(self, client, holder_key):
-
         holder_jwk = public_key_to_jwk(holder_key)
 
         response = client.post(
             "/issuer/issue",
             json={
-                "oib" : "12345678901",
+                "oib": "12345678901",
                 "holder_public_jwk": holder_jwk,
             }
         )
@@ -54,30 +55,30 @@ class TestIssuer:
         response = client.post(
             "/issuer/issue",
             json={
-                "oib" : "00000000000",
+                "oib": "00000000000",
                 "holder_public_jwk": holder_jwk,
             }
         )
 
         assert response.status_code == 404
 
+
 ########################################
 # Verifier testovi
 ########################################
 
 class TestEndToEndVerifier:
-
     """
     Sveobuhvatni test koji ispituje cijeli flow - od izdavanja PID-a do potvrde prezentacije
     """
-    def test_issue_present_verify(self, client, holder_key):
 
+    def test_issue_present_verify(self, client, holder_key):
         holder_jwk = public_key_to_jwk(holder_key)
 
         issue_response = client.post(
             "/issuer/issue",
             json={
-                "oib" : "12345678901",
+                "oib": "12345678901",
                 "holder_public_jwk": holder_jwk,
             }
         )
@@ -116,7 +117,6 @@ class TestEndToEndVerifier:
     """
 
     def test_session_cannot_be_reused(self, client, holder_key):
-
         holder_jwk = public_key_to_jwk(holder_key)
 
         sd_jwt = client.post(

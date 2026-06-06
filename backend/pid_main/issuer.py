@@ -9,10 +9,20 @@ from .config import PID_VCT, SD_DISCLOSABLE_ATTRIBUTES, SIGNING_ALGORITHM, DEFAU
 
 from .exceptions import PidIssuanceError
 
-def _build_pid_claims(attributes: dict[str, Any]
-                      , holder_public_jwk: dict
-                      , issuer_id: str
-                      , validity_days: int) -> dict[str, Any]:
+"""
+Izdavanje SD-JWT VC PID vjerodajnice koristeci sd-jwt-python biblioteku.
+"""
+
+"""
+    Slaganje claims dict-a za buduci SD-JWT
+    Plain claims (uvijek vidljivi): iss, vct, iat, exp, cnf
+    Selektivno otkrivajuci: svi atributi iz attributes
+"""
+def _build_pid_claims(
+        attributes: dict[str, Any],
+        holder_public_jwk: dict,
+        issuer_id: str,
+        validity_days: int) -> dict[str, Any]:
     now = int(time.time())
     expiration = now + validity_days * 24 * 60 * 60
 
@@ -35,20 +45,23 @@ def _build_pid_claims(attributes: dict[str, Any]
 
     return claims
 
+"""
+Izdavanje PID-a kao SD-JWT VC u compact serijalizaciji oblika  <jwt>~<atr1>~<atr2>~...~
+"""
 def create_pid(
         attributes: dict[str, Any],
         holder_public_jwk: dict,
         issuer_private_key: JWK,
         issuer_id: str = DEFAULT_ISSUER,
         validity_days: int = DEFAULT_VALIDITY_DAYS,
-):
+) -> str:
     claims = _build_pid_claims(attributes, holder_public_jwk, issuer_id, validity_days)
 
     issuer = SDJWTIssuer(
         user_claims=claims,
         issuer_keys=issuer_private_key,
         sign_alg=SIGNING_ALGORITHM,
-        add_decoy_claims=False,
+        add_decoy_claims=False,     # Dodavanje laznih hasheva radi sigurnosti, odnosno da napadac ne moze vidjeti stvarni broj hasheva, preporuceno staviti true inace
         serialization_format="compact"
     )
 

@@ -11,7 +11,7 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 
 /*
-Interface za povezivanje na backend, funkcije su asinkrone, dozvoljavaju paralelno izvodenje
+Retrofit sucelje za komunikaciju s backendom, sve su funkcije suspend i izvrsavaju se asinkrono
 */
 
 interface WalletApi {

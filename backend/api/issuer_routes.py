@@ -2,19 +2,27 @@ from fastapi import APIRouter, HTTPException, Request
 
 from pid_main.issuer import create_pid
 from pid_main.exceptions import PidIssuanceError
-from tests.test_pid_main import issuer_key
 
 from .exceptions import UnknownUserError
 from .mock_users import get_user_by_oib
 from .models import IssueRequest, IssueResponse
 
+"""
+HTTP routes za issuer endpoint-e.
+
+Definira /issuer/issue (izdavanje PID-a) i /issuer/public-key (dohvat javnog kljuca
+za verifikaciju).
+Issuer kljuc se ucitava jednom pri pokretanju aplikacije i drzi u
+app.state - ovdje samo cita referencu.
+"""
 
 router = APIRouter(
     prefix="/issuer",
     tags=["issuer"]
 )
 
-#Izdavanje PID-a za korisnika identificiranog s OIB-om
+
+# Izdavanje PID-a za korisnika identificiranog s OIB-om
 @router.post("/issue", response_model=IssueResponse)
 def issue_pid(payload: IssueRequest, request: Request) -> IssueResponse:
     try:
@@ -33,8 +41,8 @@ def issue_pid(payload: IssueRequest, request: Request) -> IssueResponse:
     except PidIssuanceError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
     return IssueResponse(sd_jwt_vc=sd_jwt_vc)
+
 
 @router.get("/public-key")
 def get_issuer_public_key(request: Request):
